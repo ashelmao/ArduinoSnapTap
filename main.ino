@@ -8,17 +8,20 @@ HIDBoot<USB_HID_PROTOCOL_KEYBOARD> HidKeyboard(&Usb); // Renamed to avoid confli
 
 class KbdRptParser : public KeyboardReportParser
 {
+  private:
+    bool aPressed;
+    bool dPressed;
+    int a;
+    int d;
+
+  public:
+    KbdRptParser() : aPressed(false), dPressed(false), a(97), d(100) {}
+
   protected:
     void OnControlKeysChanged(uint8_t before, uint8_t after);
     void OnKeyDown(uint8_t mod, uint8_t key);
     void OnKeyPressed(uint8_t key);
     void OnKeyUp(uint8_t mod, uint8_t key);
-
-  private:
-    bool aHeld = false;
-    bool dHeld = false;
-    bool aSuspended = false;
-    bool dSuspended = false;
 };
 
 void KbdRptParser::OnControlKeysChanged(uint8_t before, uint8_t after)
@@ -72,26 +75,25 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
   uint8_t c = OemToAscii(mod, key);
 
   if (c) {
-    Serial.println(c);
-    if (c == 97) { // 'A'
-      if (dHeld) {
-        Keyboard.release(100); // Release 'D'
-        dSuspended = true;
+    if (c == a)
+    {
+      Keyboard.press(a);
+      aPressed = true;
+      if (dPressed)
+      {
+        Keyboard.release(d);
       }
-      aHeld = true;
-      aSuspended = false;
-      Keyboard.press(97);
-    } else if (c == 100) { // 'D'
-      if (aHeld) {
-        Keyboard.release(97); // Release 'A'
-        aSuspended = true;
-      }
-      dHeld = true;
-      dSuspended = false;
-      Keyboard.press(100);
-    } else {
-      Keyboard.press(c);
     }
+    if (c == d)
+    {
+      Keyboard.press(d);
+      dPressed = true;
+      if (aPressed)
+      {
+        Keyboard.release(a);
+      }
+    }
+    else{Keyboard.press(c);}
   } else {
     // Handle special keys
     switch (key) {
@@ -119,29 +121,31 @@ void KbdRptParser::OnKeyUp(uint8_t mod, uint8_t key)
   uint8_t c = OemToAscii(mod, key);
 
   if (c) {
-    if (c == 97) { // 'A'
-      aHeld = false;
-      if (!aSuspended) {
-        Keyboard.release(97);
+    if (c == a)
+    {
+      Keyboard.release(a);
+      aPressed = false;
+
+      if (dPressed)
+      {
+        Keyboard.press(d);
+        dPressed = true;
       }
-      if (dSuspended) {
-        dSuspended = false;
-        dHeld = true;
-        Keyboard.press(100);
-      }
-    } else if (c == 100) { // 'D'
-      dHeld = false;
-      if (!dSuspended) {
-        Keyboard.release(100);
-      }
-      if (aSuspended) {
-        aSuspended = false;
-        aHeld = true;
-        Keyboard.press(97);
-      }
-    } else {
-      Keyboard.release(c);
+
     }
+    if (c == d)
+    {
+      Keyboard.release(d);
+      dPressed = false;
+
+      if (aPressed)
+      {
+        Keyboard.press(a);
+        aPressed = true;
+      }
+
+    }
+    else{Keyboard.release(c);}
   } else {
     // Handle special keys
     switch (key) {
